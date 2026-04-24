@@ -169,6 +169,7 @@ def _openapi_spec() -> dict:
                         "scenario_name": {"type": "string"},
                         "user_role_name": {"type": "string"},
                         "ai_role_name": {"type": "string", "nullable": True},
+                        "user_message_count": {"type": "integer"},
                     },
                 },
                 "ConversationDetail": {
@@ -212,6 +213,7 @@ def _openapi_spec() -> dict:
                             "format": "date-time",
                             "nullable": True,
                         },
+                        "user_message_count": {"type": "integer"},
                         "messages": {
                             "type": "array",
                             "items": {"$ref": "#/components/schemas/Message"},
@@ -482,6 +484,35 @@ def _openapi_spec() -> dict:
                             "content": {
                                 "application/json": {
                                     "schema": {"$ref": "#/components/schemas/Scenario"}
+                                }
+                            },
+                        },
+                        "400": {"description": "Invalid UUID"},
+                        "404": {"description": "Scenario not found"},
+                    },
+                }
+            },
+            "/api/scenarios/{scenario_id}/roles": {
+                "get": {
+                    "tags": ["Scenarios"],
+                    "summary": "List roles for one scenario",
+                    "parameters": [
+                        {
+                            "name": "scenario_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string", "format": "uuid"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of roles for the scenario",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/ScenarioRole"},
+                                    }
                                 }
                             },
                         },

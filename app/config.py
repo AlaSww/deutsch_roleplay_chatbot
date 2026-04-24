@@ -26,6 +26,7 @@ class Config:
     GROQ_STRUCTURED_MODEL = os.getenv("GROQ_STRUCTURED_MODEL", "openai/gpt-oss-20b")
     GROQ_TIMEOUT = float(os.getenv("GROQ_TIMEOUT", "60"))
     MAX_CONTEXT_MESSAGES = int(os.getenv("MAX_CONTEXT_MESSAGES", "18"))
+    SOFT_CONVERSATION_END_AFTER_USER_MESSAGES = int(os.getenv("SOFT_CONVERSATION_END_AFTER_USER_MESSAGES", "6"))
     DEFAULT_OPENING_MESSAGE = os.getenv("DEFAULT_OPENING_MESSAGE", "true").lower() == "true"
     PORT = int(os.getenv("PORT", "5000"))
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"

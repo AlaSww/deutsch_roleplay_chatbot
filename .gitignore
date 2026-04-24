@@ -1,0 +1,9 @@
+.env
+app/.env
+ui/node_modules/
+node_modules/
+__pycache__/
+*.pyc
+dist/
+build/
+.DS_Store

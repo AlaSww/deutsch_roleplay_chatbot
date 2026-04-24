@@ -43,6 +43,18 @@ def _user_profile_block(conversation: dict) -> str:
 def build_conversation_system_prompt(conversation: dict) -> str:
     german_level = conversation.get("german_level") or "A1"
     native_language = conversation.get("native_language") or "English"
+    user_message_count = conversation.get("user_message_count") or 0
+    soft_end_after = conversation.get("soft_end_after_user_messages") or 6
+
+    pacing_block = (
+        "Pacing and ending rules:\n"
+        f"- The learner has sent {user_message_count} message(s) so far.\n"
+        f"- Once the learner has sent around {soft_end_after} messages, you should start steering toward a natural ending if the scene goals are mostly covered.\n"
+        "- After that point, avoid opening new subtopics unless necessary.\n"
+        "- Try to conclude efficiently and naturally with a short closing exchange.\n"
+        "- If the task is already complete, prefer wrapping up over extending the roleplay.\n"
+        "- When ending, stay in character and end the scene naturally rather than announcing system state.\n"
+    )
 
     return f"""
 You are a German conversation partner inside a language-learning app.
@@ -72,11 +84,13 @@ Difficulty adaptation rules:
 - If the learner seems confused, simplify without breaking character.
 - Prefer German in your replies, but if a brief clarification is needed, keep it very short and make it easy for a {native_language} speaker.
 
+{pacing_block}
+
 Conversation rules:
 - Stay in role unless the learner explicitly asks for meta help.
 - Never speak as the learner role.
 - Keep responses concise, usually 2 to 5 sentences.
-- Move the scene forward and ask one relevant follow-up question when useful.
+- Move the scene forward and ask one relevant follow-up question when useful, but stop asking extra questions when the scene is ready to close.
 - Do not provide detailed corrections during the roleplay unless the learner asks for feedback.
 - Encourage the learner naturally without sounding like a teacher inside every reply.
 """.strip()

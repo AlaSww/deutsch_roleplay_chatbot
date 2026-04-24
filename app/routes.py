@@ -238,6 +238,17 @@ def scenarios_show(scenario_id: str):
     return jsonify(_json_ready(scenario))
 
 
+@api.get("/scenarios/<scenario_id>/roles")
+def scenario_roles_index(scenario_id: str):
+    if not _is_valid_uuid(scenario_id):
+        return _error("scenario_id must be a valid UUID.", 400)
+
+    scenario = repositories.get_scenario(scenario_id)
+    if not scenario:
+        return _error("Scenario not found.", 404)
+    return jsonify(_json_ready(repositories.list_scenario_roles(scenario_id)))
+
+
 @api.get("/conversations")
 @auth_required
 def conversations_index():

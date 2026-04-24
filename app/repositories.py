@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from flask import current_app
 from psycopg.types.json import Jsonb
 
 from .db import execute, fetch_all, fetch_one
@@ -57,6 +58,13 @@ def _attach_user_profile(row: dict[str, Any]) -> dict[str, Any]:
 
 def _jsonb(value: Any) -> Jsonb:
     return Jsonb(value)
+
+
+def _attach_conversation_stats(row: dict[str, Any]) -> dict[str, Any]:
+    user_message_count = int(row.get("user_message_count") or 0)
+    row["user_message_count"] = user_message_count
+    row["soft_end_after_user_messages"] = current_app.config["SOFT_CONVERSATION_END_AFTER_USER_MESSAGES"]
+    return row
 
 
 def list_users() -> list[dict[str, Any]]:
@@ -310,6 +318,18 @@ def get_scenario(scenario_id: str) -> dict[str, Any] | None:
     return scenario
 
 
+def list_scenario_roles(scenario_id: str) -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT id, scenario_id, role_name, prompt_context, created_at
+        FROM public.scenario_roles
+        WHERE scenario_id = %s
+        ORDER BY created_at ASC, role_name ASC
+        """,
+        (scenario_id,),
+    )
+
+
 def get_scenario_role(scenario_id: str, role_id: str) -> dict[str, Any] | None:
     return fetch_one(
         """
@@ -378,7 +398,13 @@ def list_conversations(user_id: str | None = None) -> list[dict[str, Any]]:
                 c.started_at,
                 c.ended_at,
                 s.name AS scenario_name,
-                sr.role_name AS user_role_name
+                sr.role_name AS user_role_name,
+                COALESCE((
+                    SELECT COUNT(*)
+                    FROM public.messages m
+                    WHERE m.conversation_id = c.id
+                      AND m.sender = 'user'
+                ), 0) AS user_message_count
             FROM public.conversations c
             JOIN public.scenarios s ON s.id = c.scenario_id
             JOIN public.scenario_roles sr ON sr.id = c.scenario_role_id
@@ -399,7 +425,13 @@ def list_conversations(user_id: str | None = None) -> list[dict[str, Any]]:
             c.started_at,
             c.ended_at,
             s.name AS scenario_name,
-            sr.role_name AS user_role_name
+            sr.role_name AS user_role_name,
+            COALESCE((
+                SELECT COUNT(*)
+                FROM public.messages m
+                WHERE m.conversation_id = c.id
+                  AND m.sender = 'user'
+            ), 0) AS user_message_count
         FROM public.conversations c
         JOIN public.scenarios s ON s.id = c.scenario_id
         JOIN public.scenario_roles sr ON sr.id = c.scenario_role_id
@@ -410,6 +442,7 @@ def list_conversations(user_id: str | None = None) -> list[dict[str, Any]]:
     for conversation in conversations:
         ai_role = _get_other_scenario_role(str(conversation["scenario_id"]), str(conversation["scenario_role_id"]))
         conversation["ai_role_name"] = ai_role["role_name"] if ai_role else None
+        _attach_conversation_stats(conversation)
 
     return conversations
 
@@ -443,7 +476,13 @@ def get_conversation(conversation_id: str) -> dict[str, Any] | None:
             s.prompt_context AS scenario_prompt_context,
             s.is_premium,
             cs.summary AS conversation_summary,
-            cs.updated_at AS summary_updated_at
+            cs.updated_at AS summary_updated_at,
+            COALESCE((
+                SELECT COUNT(*)
+                FROM public.messages m
+                WHERE m.conversation_id = c.id
+                  AND m.sender = 'user'
+            ), 0) AS user_message_count
         FROM public.conversations c
         JOIN public.users u ON u.id = c.user_id
         LEFT JOIN public.user_profiles up ON up.user_id = u.id
@@ -462,6 +501,7 @@ def get_conversation(conversation_id: str) -> dict[str, Any] | None:
     if not conversation:
         return None
     _attach_user_profile(conversation)
+    _attach_conversation_stats(conversation)
     return _attach_role_context(conversation)
 
 
